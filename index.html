@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Space Invaders Básico (Tudo em Um)</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: Arial, sans-serif;
+            color: #fff;
+        }
+
+        .game-container {
+            width: 600px;
+            height: 500px;
+            background-color: #111;
+            border: 2px solid #0f0;
+            position: relative;
+            overflow: hidden; /* Para que os elementos não saiam da tela */
+        }
+
+        .player {
+            width: 50px;
+            height: 30px;
+            background-color: #0f0;
+            position: absolute;
+            bottom: 10px;
+            left: calc(50% - 25px); /* Centraliza o jogador */
+        }
+
+        .bullet {
+            width: 5px;
+            height: 15px;
+            background-color: #ff0;
+            position: absolute;
+        }
+
+        .enemy {
+            width: 40px;
+            height: 30px;
+            background-color: #f00;
+            position: absolute;
+        }
+
+        .score {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 1.2em;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="player" id="player"></div>
+        <div class="score">Score: <span id="score">0</span></div>
+    </div>
+
+    <script>
+        const gameContainer = document.querySelector('.game-container');
+        const player = document.getElementById('player');
+        const scoreDisplay = document.getElementById('score');
+
+        let playerScore = 0;
+        let playerPosition = gameContainer.offsetWidth / 2 - player.offsetWidth / 2;
+        let bullets = [];
+        let enemies = [];
+        let enemySpeed = 1;
+        let enemyMoveInterval;
+
+        const PLAYER_SPEED = 10;
+        const BULLET_SPEED = 7;
+        const ENEMY_WIDTH = 40;
+        const ENEMY_HEIGHT = 30;
+
+        // Posicionar o jogador no início
+        player.style.left = playerPosition + 'px';
+
+        // --- Funções do Jogador ---
+
+        function movePlayer(direction) {
+            if (direction === 'left' && playerPosition > 0) {
+                playerPosition -= PLAYER_SPEED;
+            } else if (direction === 'right' && playerPosition < gameContainer.offsetWidth - player.offsetWidth) {
+                playerPosition += PLAYER_SPEED;
+            }
+            player.style.left = playerPosition + 'px';
+        }
+
+        function shoot() {
+            const bullet = document.createElement('div');
+            bullet.classList.add('bullet');
+            bullet.style.left = playerPosition + player.offsetWidth / 2 - 2.5 + 'px'; // Centraliza o tiro
+            bullet.style.bottom = player.offsetHeight + 'px';
+            gameContainer.appendChild(bullet);
+
+            bullets.push(bullet);
+
+            const bulletInterval = setInterval(() => {
+                let bulletBottom = parseInt(bullet.style.bottom);
+                if (bulletBottom < gameContainer.offsetHeight) {
+                    bullet.style.bottom = bulletBottom + BULLET_SPEED + 'px';
+                    checkBulletEnemyCollision(bullet, bulletInterval);
+                } else {
+                    bullet.remove();
+                    bullets = bullets.filter(b => b !== bullet);
+                    clearInterval(bulletInterval);
+                }
+            }, 20);
+        }
+
+        // --- Funções dos Inimigos ---
+
+        function createEnemy() {
+            const enemy = document.createElement('div');
+            enemy.classList.add('enemy');
+            // Posição aleatória no topo
+            enemy.style.left = Math.random() * (gameContainer.offsetWidth - ENEMY_WIDTH) + 'px';
+            enemy.style.top = '0px';
+            gameContainer.appendChild(enemy);
+            enemies.push(enemy);
+        }
+
+        function moveEnemies() {
+            enemies.forEach(enemy => {
+                let enemyTop = parseInt(enemy.style.top);
+                if (enemyTop < gameContainer.offsetHeight - ENEMY_HEIGHT) {
+                    enemy.style.top = enemyTop + enemySpeed + 'px';
+                } else {
+                    // Inimigo chegou na base, game over (aqui você pode adicionar lógica de game over)
+                    enemy.remove();
+                    enemies = enemies.filter(e => e !== enemy);
+                    console.log('Game Over! Um inimigo passou.');
+                    // Você pode adicionar uma tela de game over ou reiniciar o jogo aqui
+                }
+            });
+        }
+
+        // --- Detecção de Colisão ---
+
+        function checkBulletEnemyCollision(bullet, bulletInterval) {
+            enemies.forEach(enemy => {
+                const bulletRect = bullet.getBoundingClientRect();
+                const enemyRect = enemy.getBoundingClientRect();
+
+                if (bulletRect.left < enemyRect.right &&
+                    bulletRect.right > enemyRect.left &&
+                    bulletRect.top < enemyRect.bottom &&
+                    bulletRect.bottom > enemyRect.top) {
+                    
+                    // Colisão detectada!
+                    bullet.remove();
+                    clearInterval(bulletInterval);
+                    bullets = bullets.filter(b => b !== bullet);
+
+                    enemy.remove();
+                    enemies = enemies.filter(e => e !== enemy);
+
+                    playerScore += 10;
+                    scoreDisplay.textContent = playerScore;
+
+                    // Aumenta a velocidade dos inimigos a cada 50 pontos (exemplo)
+                    if (playerScore % 50 === 0 && playerScore > 0) {
+                        enemySpeed += 0.2;
+                        clearInterval(enemyMoveInterval); // Limpa o intervalo antigo
+                        enemyMoveInterval = setInterval(moveEnemies, 30); // Define um novo intervalo com a velocidade atualizada
+                    }
+                }
+            });
+        }
+
+        // --- Eventos do Teclado ---
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft' || e.key === 'a') {
+                movePlayer('left');
+            } else if (e.key === 'ArrowRight' || e.key === 'd') {
+                movePlayer('right');
+            } else if (e.key === ' ' || e.key === 'Spacebar') { // Barra de espaço para atirar
+                shoot
